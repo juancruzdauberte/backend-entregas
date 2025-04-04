@@ -106,4 +106,22 @@ app.get(`${CART_URL}/:cid`, async (req, res) => {
   }
 });
 
-app.post(`${CART_URL}/:cid/product/:pid`, async (req, res) => {});
+app.post(`${CART_URL}/:cid/product/:pid`, async (req, res) => {
+  const { cid, pid } = req.params;
+  const { quantity } = req.body;
+  const cartId = parseInt(cid);
+  const productId = parseInt(pid);
+
+  try {
+    const cart = await cartManager.addProductToCart(
+      cartId,
+      productId,
+      quantity
+    );
+    res
+      .status(201)
+      .json({ message: "Producto agregado al carrito exitosamente", cart });
+  } catch (error) {
+    console.log(error);
+  }
+});
