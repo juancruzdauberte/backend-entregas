@@ -1,127 +1,56 @@
 import express from "express";
-import { ProductManager } from "./ProductManager.js";
-import { CartManager } from "./CartManager.js";
+import handlebars from "express-handlebars";
+import __dirname from "./utils.js";
+import productsRoutes from "./routes/product.routes.js";
+import cartsRoutes from "./routes/cart.routes.js";
+import http from "http";
+import { Server } from "socket.io";
+import { ProductManager } from "./utils/ProductManager.js";
 
 const app = express();
+const server = http.createServer(app);
+const socketServer = new Server(server);
 const PORT = 8080;
 
-const PRODUCT_URL = "/api/products";
-const CART_URL = "/api/carts";
-const productManager = new ProductManager("./products.json");
-const cartManager = new CartManager("./carts.json");
+const productManager = new ProductManager("./src/products.json");
 
+app.engine("handlebars", handlebars.engine());
+app.set("views", `${__dirname}/views`);
+app.set("view engine", "handlebars");
 app.use(express.json());
+app.use(express.static(`${__dirname}/public`));
 
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en el puerto ${PORT}`);
+socketServer.on("connection", async (socket) => {
+  console.log("Cliente conectado", socket.id);
+
+  const products = await productManager.getProducts();
+  socket.emit("updateProducts", products);
+
+  socket.on("addProduct", async (data) => {
+    await productManager.addProduct(data);
+    const updated = await productManager.getProducts();
+    socketServer.emit("updateProducts", updated);
+  });
+
+  socket.on("deleteProduct", async (code) => {
+    await productManager.deleteProduct(code);
+    const updated = await productManager.getProducts();
+    socketServer.emit("updateProducts", updated);
+  });
 });
 
-app.get(PRODUCT_URL, async (req, res) => {
-  try {
-    const products = await productManager.getProducts();
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ error: "Error al obtener todos los productos" });
-  }
+server.listen(PORT, () => {
+  console.log(`Servidor corriendo en el puerto http://localhost:${PORT}`);
 });
 
-app.get(`${PRODUCT_URL}/:pid`, async (req, res) => {
-  const { pid } = req.params;
-  const id = parseInt(pid);
+app.use("/api/products", productsRoutes);
+app.use("/api/carts", cartsRoutes);
 
-  try {
-    const product = await productManager.getProductById(id);
-
-    if (!product) {
-      return res.status(404).json({ error: "Producto no encontrado" });
-    }
-
-    res.json(product);
-  } catch (error) {
-    res.status(500).json({ error: "Error al obtener el producto" });
-  }
+app.get("/", async (req, res) => {
+  res.render("formulario");
 });
 
-app.post(PRODUCT_URL, async (req, res) => {
-  try {
-    const newProduct = await productManager.addProduct(req.body);
-    res
-      .status(201)
-      .json({ message: "Producto creado correctamente", product: newProduct });
-  } catch (error) {
-    res.status(500).json({ error: "Error al crear el producto" });
-  }
-});
-
-app.put(`${PRODUCT_URL}/:pid`, async (req, res) => {
-  const { pid } = req.params;
-  const id = parseInt(pid);
-
-  try {
-    const updateProduct = await productManager.updateProduct(id, req.body);
-    res.json({ message: "Producto actualizado", product: updateProduct });
-  } catch (error) {
-    res.status(500).json({ error: "Error al actualizar el producto" });
-  }
-});
-
-app.delete(`${PRODUCT_URL}/:pid`, async (req, res) => {
-  const { pid } = req.params;
-  const id = parseInt(pid);
-
-  try {
-    await productManager.deleteProduct(id);
-    res.status(201).json({
-      message: "Producto eliminado correctamente",
-    });
-  } catch (error) {
-    res.status(404).json({ error: "Error al eliminar el producto" });
-  }
-});
-
-app.post(CART_URL, async (req, res) => {
-  try {
-    await cartManager.createCart();
-    res.status(201).json({ message: "Carrito creado correctamente" });
-  } catch (error) {
-    console.error(error);
-  }
-});
-
-app.get(`${CART_URL}/:cid`, async (req, res) => {
-  const { cid } = req.params;
-  const id = parseInt(cid);
-  try {
-    const cart = await cartManager.getCartById(id);
-
-    if (!cart) {
-      return res.status(404).json({ error: "Carrito no encontrado" });
-    }
-
-    res
-      .status(201)
-      .json({ message: "Carrito obtenido correctamente ", cart: cart });
-  } catch (error) {
-    console.error(error);
-  }
-});
-
-app.post(`${CART_URL}/:cid/product/:pid`, async (req, res) => {
-  const { cid, pid } = req.params;
-  const { quantity } = req.body;
-  const cartId = parseInt(cid);
-  const productId = parseInt(pid);
-
-  try {
-    const cart = await cartManager.addProductToCart(
-      cartId,
-      productId,
-      quantity
-    );
-    res
-      .status(201)
-      .json({ message: "Producto agregado al carrito exitosamente", cart });
-  } catch (error) {
-    console.log(error);
-  }
+app.get("/api/realtimeproducts", async (req, res) => {
+  const products = await productManager.getProducts();
+  res.render("realTimeProducts", { products });
 });

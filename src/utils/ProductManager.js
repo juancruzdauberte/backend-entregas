@@ -83,10 +83,10 @@ export class ProductManager {
     }
   }
 
-  async deleteProduct(id) {
+  async deleteProduct(code) {
     try {
       const products = await this.getProducts();
-      const newProducts = products.filter((product) => product.id !== id);
+      const newProducts = products.filter((product) => product.code !== code);
 
       if (products.length === newProducts.length)
         throw new Error("El producto no existe");
