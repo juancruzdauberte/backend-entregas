@@ -45,12 +45,11 @@ server.listen(PORT, () => {
 
 app.use("/api/products", productsRoutes);
 app.use("/api/carts", cartsRoutes);
-
-app.get("/", async (req, res) => {
-  res.render("formulario");
-});
-
 app.get("/api/realtimeproducts", async (req, res) => {
   const products = await productManager.getProducts();
   res.render("realTimeProducts", { products });
+});
+
+app.get("/", async (req, res) => {
+  res.render("formulario");
 });
