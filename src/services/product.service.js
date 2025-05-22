@@ -6,7 +6,7 @@ class ProductService {
   }
 
   async getByCode(code) {
-    return await Product.findOne({ code });
+    return await Product.find({ code });
   }
 
   async create(product) {
