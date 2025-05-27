@@ -5,11 +5,21 @@ import productsRoutes from "./routes/product.routes.js";
 import cartsRoutes from "./routes/cart.routes.js";
 import { connectDb } from "./config/db.js";
 import config from "./config/config.js";
+import viewRoutes from "./public/js/views.router.js";
+import { addProductToCart } from "./controller/cart.controller.js";
 
 connectDb();
 const app = express();
 
-app.engine("handlebars", handlebars.engine());
+app.engine(
+  "handlebars",
+  handlebars.engine({
+    runtimeOptions: {
+      allowProtoPropertiesByDefault: true,
+      allowProtoMethodsByDefault: true,
+    },
+  })
+);
 app.set("views", `${__dirname}/views`);
 app.set("view engine", "handlebars");
 app.use(express.json());
@@ -24,6 +34,4 @@ app.listen(config.PORT, () => {
 
 app.use("/api/products", productsRoutes);
 app.use("/api/carts", cartsRoutes);
-app.get("/", async (req, res) => {
-  res.render("formulario");
-});
+app.use("/", viewRoutes);

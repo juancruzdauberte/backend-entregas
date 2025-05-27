@@ -17,6 +17,28 @@ class CartService {
     return await Cart.findByIdAndDelete(id);
   }
 
+  async updateCart(id, data) {
+    return await Cart.findByIdAndUpdate(id, { products: data }, { new: true });
+  }
+
+  async addProductToCart(cartId, productId) {
+    const cart = await Cart.findById(cartId);
+
+    if (!cart) {
+      throw new Error(`Carrito con id ${cartId} no encontrado`);
+    }
+    const productInCart = cart.products.find(
+      (p) => p.product.toString() === productId
+    );
+    if (productInCart) {
+      productInCart.quantity += 1;
+    } else {
+      cart.products.push({ product: productId, quantity: 1 });
+    }
+    await cart.save();
+    return cart;
+  }
+
   async deleteProductFromCart(cid, pid) {
     const cart = await Cart.findById(cid);
     if (cart.products.length === 0) {
@@ -38,6 +60,10 @@ class CartService {
     }
 
     return updatedCart;
+  }
+
+  async createCartEmpty() {
+    return await Cart.create({ products: [] });
   }
 }
 
